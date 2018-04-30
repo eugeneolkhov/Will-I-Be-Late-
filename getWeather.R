@@ -5,7 +5,7 @@ library(tidyverse)
 library(lubridate)
 library(xlsx)
 
-location <- "~/Documents/_SCHOOL/_Drexel/STAT 642 - Data Mining/Assignments/Will-I-Be-Late-/Data"
+setwd("~/Documents/_SCHOOL/_Drexel/STAT 642 - Data Mining/Assignments/Will-I-Be-Late-/data")
 
 #-- API setup -------------------------------------------------------------------------------------
 
@@ -48,9 +48,11 @@ dates <- c(16883:17111) %>%  # create vector from 16883 to 17111
 # Let's create a few sub-ranges we can combine later
 
 dates1 <- dates[1:7]
-dates2 <- dates[8:100]
-dates3 <- dates[101:229]
-
+dates2 <- dates[8:50]
+dates3 <- dates[51:100]
+dates4 <- dates[101:150]
+dates5 <- dates[151:200]
+dates6 <- dates[201:229]
 
 
 # load function to call the DarkSky API for our dates and locations
@@ -59,13 +61,20 @@ source("callAPI.R")
 # this will make lots of API calls.  If you call > 1,000 per day, it costs money!
   # one call is one station per day
 
-# weather1 <- callAPI(stations, latitudes, longitudes, dates1)
-# weather2 <- callAPI(stations, latitudes, longitudes, dates2)
+weather1 <- callAPI(stations, latitudes, longitudes, dates1)
+weather2 <- callAPI(stations, latitudes, longitudes, dates2)
 weather3 <- callAPI(stations, latitudes, longitudes, dates3)
+weather4 <- callAPI(stations, latitudes, longitudes, dates4)
+weather5 <- callAPI(stations, latitudes, longitudes, dates5)
+weather6 <- callAPI(stations, latitudes, longitudes, dates6)
+
 
 # join all of the weather subsets together
-weather <- union_all(weather1, weather2)
-weather <- union_all(weather, weather3)
+weather <- union_all(weather1, weather2) %>%
+  union_all(weather3) %>%
+  union_all(weather4) %>%
+  union_all(weather5) %>%
+  union_all(weather6)
 
 # convert relevant columns to factors
 weather$names <- factor(weather$names)
@@ -75,5 +84,5 @@ weather$icon <- factor(weather$icon)
 weather$precipType <- factor(weather$precipType)
 
 # save to file
-write.xlsx2(weather, paste(location,"weather.xlsx", sep="/"), col.names = T)
+write.xlsx2(weather, "weather.xlsx", col.names = T, append=F)
 

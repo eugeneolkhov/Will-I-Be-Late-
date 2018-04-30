@@ -24,7 +24,7 @@ callAPI <- function(stations, lats, lons, dates) {
       weather <- union_all(weather,addName)
 
       # remove the old data
-      rm(names, hourly, station, addName)
+      rm(hourly, station, addName)
 
     } # end location for
   } # end date for
