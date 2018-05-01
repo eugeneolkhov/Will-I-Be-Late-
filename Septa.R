@@ -27,10 +27,16 @@
 
 #-- Initial setup ---------------------------------------------------------------------------------
 
+# install.packages('tidyverse')
+# install.packages('openxlsx')
+# install.packages('lubridate')
+
 library(tidyverse)
+library(openxlsx)
+library(lubridate)
 
 setwd("~/Documents/_SCHOOL/_Drexel/STAT 642 - Data Mining/Assignments/Project")
-location <- "~/Documents/_SCHOOL/_Drexel/STAT 642 - Data Mining/Assignments/Will-I-Be-Late-/Data"
+location <- "~/Documents/_SCHOOL/_Drexel/STAT 642 - Data Mining/Assignments/Will-I-Be-Late-/data"
 
 # Colorblind-friendly palette with grey:
 cbGray <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
@@ -42,13 +48,24 @@ cbBlack <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "
 otp <- read.csv(paste(location,"otp.csv", sep="/"))
 # trainView <- read.csv(paste(location,"trainView.csv", sep="/"))
 
-# source: DarkSky API - see "getWeather.R"
-weather <- read.csv(paste(location,"weather.csv",sep="/"))
-
-
 # SEPTA - On Time Performance Data. 2016-03-23 to 2016-11-06
 summary(otp)
 head(otp)
+
+
+# source: DarkSky API - see "getWeather.R"
+weather <- read.xlsx(paste(location,"weather.xlsx",sep="/"),sheetIndex=1)
+
+# convert relevant columns to factors
+weather <- select(weather, -NA.)
+weather$station <- factor(weather$station)
+weather$time <- factor(weather$time)
+weather$summary <- factor(weather$summary)
+weather$icon <- factor(weather$icon)
+weather$precipType <- factor(weather$precipType)
+
+summary(weather)
+
 
 
 

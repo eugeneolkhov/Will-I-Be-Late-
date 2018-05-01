@@ -1,9 +1,12 @@
-#install.packages("darksky")
+# install.packages('darksky')
+# install.packages('tidyverse')
+# install.packages('lubridate')
+# install.packages('openxlsx')
 
 library(darksky)
 library(tidyverse)
 library(lubridate)
-library(xlsx)
+library(openxlsx)
 
 setwd("~/Documents/_SCHOOL/_Drexel/STAT 642 - Data Mining/Assignments/Will-I-Be-Late-/data")
 
@@ -77,7 +80,7 @@ weather <- union_all(weather1, weather2) %>%
   union_all(weather6)
 
 # convert relevant columns to factors
-weather$names <- factor(weather$names)
+weather$station <- factor(weather$station)
 weather$time <- factor(weather$time)
 weather$summary <- factor(weather$summary)
 weather$icon <- factor(weather$icon)
