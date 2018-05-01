@@ -1,0 +1,3 @@
+Note:  SEPTA data is too large to upload to repo.
+
+It is available through Kaggle: https://www.kaggle.com/septa/on-time-performance/data
