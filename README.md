@@ -1,5 +1,5 @@
 STAT642 Group X  
-Andrew Armstrong, Abhay Bhat, Alex Graber, Eugene Olkov, Elizabeth Perkins  
+Andrew Armstrong, Abhay Bhat, Alex Graber, Eugene Olkhov, Elizabeth Perkins  
 
 # Project Proposal – Will I Be Late?
 
