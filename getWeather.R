@@ -8,7 +8,8 @@ library(tidyverse)
 library(lubridate)
 library(openxlsx)
 
-setwd("~/Documents/_SCHOOL/_Drexel/STAT 642 - Data Mining/Assignments/Will-I-Be-Late-/data")
+location <- "~/Documents/_SCHOOL/_Drexel/STAT 642 - Data Mining/Assignments/Will-I-Be-Late-/data"
+setwd("~/Documents/_SCHOOL/_Drexel/STAT 642 - Data Mining/Assignments/Will-I-Be-Late-")
 
 #-- API setup -------------------------------------------------------------------------------------
 
@@ -21,18 +22,20 @@ usethis::edit_r_environ()
 # save and restart R
 
 
-#-- Get weather info ------------------------------------------------------------------------------
+#-- Set up locations and dates --------------------------------------------------------------------
 
 # test <- get_forecast_for(43.2672, -70.8617, "2013-05-06T12:00:00-0400", add_headers=TRUE)
 
 # get forecast for stations:
-# Philadelphia:
-# Thornedale:
-# ...
+# Philadelphia ,Thornedale, Fox Chase
 
 stations <- c("Philadelphia","Thorndale")
 latitudes <- c(39.954129, 39.992838)
-longitudes <- c(-75.16682624816895, 75.763693)
+longitudes <- c(-75.16682624816895, -75.763693)
+
+stations <- "Fox Chase"
+latitudes <- 40.075953
+longitudes <- -75.083592
 
 # need weather from 2016-03-23 to 2016-11-06
 # dates get converted to numbers in R:
@@ -58,6 +61,7 @@ dates5 <- dates[151:200]
 dates6 <- dates[201:229]
 
 
+#-- Get weather info ------------------------------------------------------------------------------
 # load function to call the DarkSky API for our dates and locations
 source("callAPI.R")
 
@@ -72,20 +76,47 @@ weather5 <- callAPI(stations, latitudes, longitudes, dates5)
 weather6 <- callAPI(stations, latitudes, longitudes, dates6)
 
 
-# join all of the weather subsets together
+#-- Combine and save data -------------------------------------------------------------------------
+
+
+# read in previously scraped data
+weather0 <- read.csv(paste(location, "weather.old.csv", sep="/"), header=T)
+  # Note: renamed as "old" so we have a backup
+
+# combine scraped data
 weather <- union_all(weather1, weather2) %>%
   union_all(weather3) %>%
   union_all(weather4) %>%
   union_all(weather5) %>%
   union_all(weather6)
 
-# convert relevant columns to factors
-weather$station <- factor(weather$station)
-weather$time <- factor(weather$time)
-weather$summary <- factor(weather$summary)
-weather$icon <- factor(weather$icon)
-weather$precipType <- factor(weather$precipType)
+# check to make sure we have same columns
+names(weather0) == names(weather)
+# names(weather0)
+# names(weather)
+
+# check types to make sure we have same types to combine
+str(weather0)
+str(weather)
+
+# convert variables to combine
+weather0$time <- as.POSIXct(weather0$time)
+
+weather$summary <- as.factor(weather$summary)
+weather$icon <- as.factor(weather$icon)
+weather$precipType <- as.factor(weather$precipType
+                                )
+# combine old and new
+weather <- union_all(weather0, weather)
+
+
+# # convert to appropriate formats
+# weather$station <- factor(weather$station)
+# weather$time <- as_date(weather$time)
+# weather$summary <- factor(weather$summary)
+# weather$icon <- factor(weather$icon)
+# weather$precipType <- factor(weather$precipType)
 
 # save to file
-write.xlsx2(weather, "weather.xlsx", col.names = T, append=F)
+write.csv(weather, paste(location, "weather.csv", sep="/"), col.names = T, row.names=F)
 

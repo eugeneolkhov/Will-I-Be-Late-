@@ -52,14 +52,23 @@ otp <- read.csv(paste(location,"otp.csv", sep="/"))
 summary(otp)
 head(otp)
 
+# subset data for Paoli/Thorndale line and Fox-Chase
+
+# identify inbound thorndale --> philly trains
+thorndale <- otp %>%
+  filter(origin == 'Thorndale')
+
+foxchase <- otp %>%
+  filter(origin == 'Fox Chase')
+
+### NOTES: need to group by trainID and date
 
 # source: DarkSky API - see "getWeather.R"
 weather <- read.xlsx(paste(location,"weather.xlsx",sep="/"),sheetIndex=1)
 
 # convert relevant columns to factors
-weather <- select(weather, -NA.)
 weather$station <- factor(weather$station)
-weather$time <- factor(weather$time)
+weather$time <- as_date(weather$time)
 weather$summary <- factor(weather$summary)
 weather$icon <- factor(weather$icon)
 weather$precipType <- factor(weather$precipType)
