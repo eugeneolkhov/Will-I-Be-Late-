@@ -86,3 +86,9 @@ str(weather)
 # SVM - Alex
 # Logistic (+ regularization?) - Abhay
 
+### Timeline ###
+# data by 15 May
+# models by 22 May
+# CV by 29 May
+# present on 5 June
+
