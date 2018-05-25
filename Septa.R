@@ -18,10 +18,16 @@
 # install.packages('tidyverse')
 # install.packages('openxlsx')
 # install.packages('lubridate')
+# install.packages('skimr')
+# install.packages('xray')
+# install.packages('caret')
 
 library(tidyverse)
 library(openxlsx)
 library(lubridate)
+library(skimr)
+library(xray)
+library(caret)
 
 setwd("~/Documents/_SCHOOL/_Drexel/STAT 642 - Data Mining/Assignments/Will-I-Be-Late-")
 location <- "~/Documents/_SCHOOL/_Drexel/STAT 642 - Data Mining/Assignments/Will-I-Be-Late-/data"
@@ -34,7 +40,7 @@ cbBlack <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "
 
 # source: Kaggle: https://www.kaggle.com/septa/on-time-performance
 otp <- read.csv(paste(location,"otp.csv", sep="/"))
-trainView <- read.csv(paste(location,"trainView.csv", sep="/"))
+# trainView <- read.csv(paste(location,"trainView.csv", sep="/"))
 
 # Clean up train names
 otp$train_id <- gsub('[A-Za-z/. /-]+', '' ,otp$train_id)
@@ -51,9 +57,13 @@ otp$status <- NULL
 # SEPTA - On Time Performance Data. 2016-03-23 to 2016-11-06
 summary(otp)
 head(otp)
+#skim(otp) # takes a while!
+anomalies(otp)
 
-summary(trainView)
-head(trainView)
+# summary(trainView)
+# head(trainView)
+# skimr::skim(trainView)
+# xray::anomalies(trainView)
 
 # quick summary - how late are the trains?
 delays <- otp %>%
@@ -210,6 +220,12 @@ saveRDS(thorndale_out_otp_weather, paste(location,"thorndale_out_weather.RDS", s
 saveRDS(foxchase_in_otp_weather, paste(location,"foxchase_in_weather.RDS", sep="/"))
 saveRDS(foxchase_out_otp_weather, paste(location,"foxchase_out_weather.RDS", sep="/"))
 
+rm(otp, start, end, delays, weather, weather_foxchase, weather_phila, weather_thorndale,
+   foxchase_in_otp, foxchase_out_otp,
+   foxchase_in_otp_weather, foxchase_out_otp_weather,
+   Thorndale_list, Thorndale_list_out,
+   thorndale_in_otp, thorndale_out_otp,
+   thorndale_in_otp_weather, thorndale_out_otp_weather)
 
 #-- Data cleaning ---------------------------------------------------------------------------------
 location <- "~/Documents/_SCHOOL/_Drexel/STAT 642 - Data Mining/Assignments/Will-I-Be-Late-/data"
@@ -220,98 +236,229 @@ foxchase_out_weather <- readRDS(paste(location,"foxchase_out_weather.RDS", sep="
 thorndale_in_weather <- readRDS(paste(location,"thorndale_in_weather.RDS", sep="/"))
 thorndale_out_weather <- readRDS(paste(location,"thorndale_out_weather.RDS", sep="/"))
 
+# stack data
+thorndale_data <- rbind(thorndale_in_weather, thorndale_out_weather)
+foxchase_data <- rbind(foxchase_in_weather, foxchase_out_weather)
+stack_data <- rbind(thorndale_data, foxchase_data)
+
+
+rm(thorndale_in_weather, thorndale_out_weather, foxchase_in_weather, foxchase_out_weather)
+#rm(thorndale_data, foxchase_data)
+
+
 # Convert Status to Late/Not-Late
-thorndale_in_weather <- mutate(thorndale_in_weather,
-                               delay = ifelse(thorndale_in_weather$delay > 0, 1,
-                                             ifelse(thorndale_in_weather$delay == 999, 999, 0)))
+late <- 0 # threshold for lateness (late if > 'late')
+thorndale_data <- mutate(thorndale_data,
+                         delay = ifelse(thorndale_data$delay > late, 1,
+                                        ifelse(thorndale_data$delay == 999, 999, 0)))
 
-thorndale_out_weather <- mutate(thorndale_out_weather,
-                               delay = ifelse(thorndale_out_weather$delay > 0, 1,
-                                             ifelse(thorndale_out_weather$delay == 999, 999, 0)))
+foxchase_data <- mutate(foxchase_data,
+                        delay = ifelse(foxchase_data$delay > late, 1,
+                                       ifelse(foxchase_data$delay == 999, 999, 0)))
 
-foxchase_in_weather <- mutate(foxchase_in_weather,
-                               delay = ifelse(foxchase_in_weather$delay > 0, 1,
-                                             ifelse(foxchase_in_weather$delay == 999, 999, 0)))
 
-foxchase_out_weather <- mutate(foxchase_out_weather,
-                               delay = ifelse(foxchase_out_weather$delay > 0, 1,
-                                             ifelse(foxchase_out_weather$delay == 999, 999, 0)))
+stack_data <- mutate(stack_data,
+                     delay = ifelse(stack_data$delay > late, 1,
+                                    ifelse(stack_data$delay == 999, 999, 0)))
+
+
+
 
 # Modify/Format Variables
-thorndale_in_weather <- thorndale_in_weather %>%
+thorndale_data <- thorndale_data %>%
   filter(delay != 999) %>%
-  mutate(delay = factor(thorndale_in_weather$delay)) %>%
-  mutate(day_of_week = factor(weekdays(thorndale_in_weather$round_timestamp))) %>%
-  mutate(hour = factor(hour(thorndale_in_weather$round_timestamp))) %>%
-  mutate(month = factor(month(thorndale_in_weather$round_timestamp))) %>%
-  mutate(origin = factor(as.character(thorndale_in_weather$origin))) %>%
-  mutate(next_station = factor(as.character(thorndale_in_weather$next_station)))
+  mutate(delay = factor(delay)) %>%
+  mutate(day_of_week = factor(weekdays(round_timestamp))) %>%
+  mutate(hour = factor(hour(round_timestamp))) %>%
+  mutate(month = factor(month(round_timestamp))) %>%
+  mutate(origin = factor(as.character(origin))) %>%
+  mutate(next_station = factor(as.character(next_station)))
 
-thorndale_out_weather <- thorndale_out_weather %>%
+foxchase_data <- foxchase_data %>%
   filter(delay != 999) %>%
-  mutate(delay = factor(thorndale_out_weather$delay)) %>%
-  mutate(day_of_week = factor(weekdays(thorndale_out_weather$round_timestamp))) %>%
-  mutate(hour = factor(hour(thorndale_out_weather$round_timestamp))) %>%
-  mutate(month = factor(month(thorndale_out_weather$round_timestamp))) %>%
-  mutate(origin = factor(as.character(thorndale_out_weather$origin))) %>%
-  mutate(next_station = factor(as.character(thorndale_out_weather$next_station)))
+  mutate(delay = factor(delay)) %>%
+  mutate(day_of_week = factor(weekdays(round_timestamp))) %>%
+  mutate(hour = factor(hour(round_timestamp))) %>%
+  mutate(month = factor(month(round_timestamp))) %>%
+  mutate(origin = factor(as.character(origin))) %>%
+  mutate(next_station = factor(as.character(next_station)))
 
-foxchase_in_weather <- foxchase_in_weather %>%
+stack_data <- stack_data %>%
   filter(delay != 999) %>%
-  mutate(delay = factor(foxchase_in_weather$delay)) %>%
-  mutate(day_of_week = factor(weekdays(foxchase_in_weather$round_timestamp))) %>%
-  mutate(hour = factor(hour(foxchase_in_weather$round_timestamp))) %>%
-  mutate(month = factor(month(foxchase_in_weather$round_timestamp))) %>%
-  mutate(origin = factor(as.character(foxchase_in_weather$origin))) %>%
-  mutate(next_station = factor(as.character(foxchase_in_weather$next_station)))
-
-foxchase_out_weather <- foxchase_out_weather %>%
-  filter(delay != 999) %>%
-  mutate(delay = factor(foxchase_out_weather$delay)) %>%
-  mutate(day_of_week = factor(weekdays(foxchase_out_weather$round_timestamp))) %>%
-  mutate(hour = factor(hour(foxchase_out_weather$round_timestamp))) %>%
-  mutate(month = factor(month(foxchase_out_weather$round_timestamp))) %>%
-  mutate(origin = factor(as.character(foxchase_out_weather$origin))) %>%
-  mutate(next_station = factor(as.character(foxchase_out_weather$next_station)))
+  mutate(delay = factor(delay)) %>%
+  mutate(day_of_week = factor(weekdays(round_timestamp))) %>%
+  mutate(hour = factor(hour(round_timestamp))) %>%
+  mutate(month = factor(month(round_timestamp))) %>%
+  mutate(origin = factor(as.character(origin))) %>%
+  mutate(next_station = factor(as.character(next_station)))
 
 
 # Variable selection
   # Train ID has 94 levels - randomForest only supports up to 53.
-model_vars <- c("origin", "next_station", "delay", "day_of_week", "month", "hour",
+model_vars <- c("delay", "origin", "next_station", "day_of_week", "month", "hour",
              "precipIntensity", "precipProbability", "temperature", "windSpeed", "visibility")
 
-thorndale_in_model <- select(thorndale_in_weather, model_vars)
-thorndale_out_model <- select(thorndale_out_weather, model_vars)
-foxchase_in_model <- select(foxchase_in_weather, model_vars)
-foxchase_out_model <- select(foxchase_out_weather, model_vars)
+thorndale_model <- thorndale_data %>%
+  arrange(train_id, timeStamp)  %>%
+  select(model_vars)
+
+foxchase_model <- foxchase_data %>%
+  arrange(train_id, timeStamp)  %>%
+  select(model_vars)
+
+model_data <- stack_data %>%
+  arrange(train_id, timeStamp)  %>%
+  select(model_vars)
+
+rm(late, foxchase_model, thorndale_model, model_vars, foxchase_data, thorndale_data, stack_data)
+
+#-- Impute NAs ----------------------------------------------------------------------------------
+
+# do we have NAs we need to fix?
+#summary(thorndale_model)
+#summary(foxchase_model) # windspeed
+summary(model_data) # windspeed
+
+
+# find mean between hour pre and post NA value
+lagk <- function(x, k) {
+  # x is column; k is lag#
+  if (k>0) {
+    return (c(rep(NA, k), x)[1 : length(x)] )
+  }
+  else {
+    return (c(x[(-k+1) : length(x)], rep(NA, -k)));
+  }
+}
+      # lagk can lag forwards or backwards! (forwards gives 'pre', backwards gives 'post')
+      # x<-1:3;
+      # (cbind(x, lagk(x, 1), lagk(x,-1)))
+      #      x  1 -1
+      # [1,] 1 NA  2
+      # [2,] 2  1  3
+      # [3,] 3  2 NA
+
+# for columns in continuous:
+# impute <- cbind(x, lagk (x, 1), lagk(x, -1)
+# names(impute) <- c('x', 'pre', 'post')
+# if x.isNull {
+#   x <- mean(pre, post)
+# }
+
+
+# create list of data
+data <- list(model_data)
+# data <- list(thorndale_data, foxchase_data, model_data)
+
+# identify columns to impute
+continuous <- "windSpeed"
+# continuous <- c("precipIntensity", "precipProbability", "temperature", "windSpeed", "visibility")
+
+
+for (j in length(data)) {
+  for (i in length(continuous)) {
+
+    # extract column
+    x <- data[[j]][continuous[i]][[1]]
+      # data[j] returns a list, data[[j]] returns the value of the list (i.e., the data frame)
+      # data[[j]][continuous[i]] is similar to dataframe$colname
+      # data[[j]][continuous[i]][[1]] returns the value of the first column (i.e., the vector);
+        # as before, [1] would return the dataframe column
+
+    # create df with column + lag1 + lag-1
+    impute <- as.data.frame(cbind(x, lagk(x, 1), lagk(x, -1)))
+    names(impute) <- c('x','pre','post')
+
+    # impute and replace na value
+    impute <- impute %>%
+      mutate(y = if_else(is.na(x), (impute$pre+impute$post)/2, x))
+
+    # replace in original data
+    data[[j]][continuous[i]][[1]] <- impute$y  # or impute[['y']]
+
+  } # end for - continuous
+} # end for - data
+
+#summary(thorndale_data)
+#summary(foxchase_data)
+summary(model_data)
+
+rm(data, continuous)
+
+#-- Drop NAs --------------------------------------------------------------------------------------
+
+#summary(foxchase_data)
+summary(model_data)
+
+#foxchase_data <- foxchase_data[complete.cases(foxchase_data),]
+model_data <- model_data[complete.cases(model_data),]
+
+#summary(foxchase_data)
+summary(model_data)
+
+
+#-- Create Dummy Variables and Scale --------------------------------------------------------------
+library(tidyverse)
+library(caret)
+
+delay <- model_data$delay
+
+# break out factors
+categorical <- model_data %>%
+  select(hour, day_of_week, month, origin, next_station)
+dummies <- model.matrix(~ .,data = categorical)
+
+# scale continuous data
+continuous <- model_data %>%
+  select(precipIntensity, precipProbability, temperature, windSpeed, visibility)
+scaled <- scale(continuous)
+summary(scaled)
+
+model_data <- as.data.frame(cbind(delay, cbind(dummies, scaled)))
+
+rm(categorical, continuous, dummies, scaled, delay)
+
+#-- Save model data -------------------------------------------------------------------------------
+
+### Export RDS
+saveRDS(model_data, paste(location,"model_data.rds", sep="/"))
+
+
+
+#--- Split Train/Test -----------------------------------------------------------------------------
+
+location <- "~/Documents/_SCHOOL/_Drexel/STAT 642 - Data Mining/Assignments/Will-I-Be-Late-/data"
+
+# import saved data
+model_data <- readRDS(paste(location,"model_data.rds", sep="/"))
+
+# svm needs the class labels to be a labelled factor
+model_data$delay <- factor(model_data$delay,
+                           labels = c("on.time","late"),
+                           levels = c(1, 2))
 
 # Split into training/testing set
-set.seed(100)
-train <- sample(nrow(thorndale_in_model), 0.7*nrow(thorndale_in_model), replace = FALSE)
-thorndale_in_train <- thorndale_in_model[train,]
-thorndale_in_test <- thorndale_in_model[-train,]
+set.seed(3456)
+index <- createDataPartition(model_data$delay, p = .7,
+                                  list = FALSE,
+                                  times = 1)
 
-set.seed(101)
-train <- sample(nrow(thorndale_out_model), 0.7*nrow(thorndale_out_model), replace = FALSE)
-thorndale_out_train <- thorndale_out_model[train,]
-thorndale_out_test <- thorndale_out_model[-train,]
+model_train <- model_data[ index,]
+model_test  <- model_data[-index,]
 
-set.seed(102)
-train <- sample(nrow(foxchase_in_model), 0.7*nrow(foxchase_in_model), replace = FALSE)
-foxchase_in_train <- foxchase_in_model[train,]
-foxchase_in_test <- foxchase_in_model[-train,]
-
-set.seed(103)
-train <- sample(nrow(foxchase_out_model), 0.7*nrow(foxchase_out_model), replace = FALSE)
-foxchase_out_train <- foxchase_out_model[train,]
-foxchase_out_test <- foxchase_out_model[-train,]
-  # Note: Don't forget to crossvalidate on training sets!
+### Note: Don't forget to crossvalidate on training sets!
 
 
-rm(thorndale_in_weather, thorndale_out_weather, foxchase_in_weather, foxchase_out_weather,
-   thorndale_in_model, thorndale_out_model, foxchase_in_model, foxchase_out_model,
-   train)
+# create mini set for fast testing
+set.seed(9876)
+pct <- .02 # can incrementally increase this
+a <- sample(nrow(model_train), pct * nrow(model_train), replace = FALSE)
+b <- sample(nrow(model_test), pct * nrow(model_test), replace = FALSE)
 
+test_train <- model_train[a,]
+test_test <- model_test[b,]
+
+rm(index, a,b)
 
 #-- Models ----------------------------------------------------------------------------------------
 # Naive Bayes (+ decision tree for binning?) - Liz
@@ -326,62 +473,23 @@ rm(thorndale_in_weather, thorndale_out_weather, foxchase_in_weather, foxchase_ou
 # CV by 29 May
 # present on 5 June
 
+
+
 #-- Random Forest  --------------------------------------------------------------------------------
-#install.packages("randomForest")
-library(randomForest)
 
-# Initial Model
-thorndale_in_model <- randomForest(delay ~ ., data = thorndale_in_train, importance = TRUE)
-thorndale_in_model
-
-# Predicting on train set
-thorndale_in_pred_train <- predict(thorndale_in_model, thorndale_in_train, type = "class")
-
-# Checking classification accuracy
-table(thorndale_in_pred_train, thorndale_in_train$delay)
-
-
-# Predicting on Validation set
-thorndale_in_pred_test <- predict(thorndale_in_model, thorndale_in_test, type = "class")
-
-# Checking classification accuracy
-mean(thorndale_in_pred_test == thorndale_in_test$delay)
-prop.table(table(thorndale_in_pred_test,thorndale_in_test$delay))
-
-# importance
-importance(thorndale_in_model)
 
 
 #-- SVM -------------------------------------------------------------------------------------------
-#install.packages("e1071")
-library(e1071)
+model <- svm(delay ~ ., data = train,
+                         type = "C-classification", scale = TRUE,
+                         cost = 1, # CV
+                         epsilon = 0.1, # CV
+                         kernel = "radial", # needs CV
+                         gamma = 1 / ncol(data), # for all except linear; needs CV
+                         # degree = 3, # for kernel = polynomial; needs CV
+                         # coef0 = 0, # for kernels = polynomial & sigmoid; needs CV
+                         class.weights = NULL, # probably don't need to weight classes
+                         shrinking = TRUE,
+                         cross = 0,
+                         fitted = TRUE)
 
-thorndale_in_model <- svm(delay ~ ., data = thorndale_in_train,
-                          type = "C-classification", scale = TRUE,
-    cost = 1, # CV
-    epsilon = 0.1, # CV
-      kernel = "radial", # needs CV
-      gamma = 1 / ncol(data), # for all except linear; needs CV
-      # degree = 3, # for kernel = polynomial; needs CV
-      coef0 = 0, # for all kernels except polynomial & sigmoid; needs CV
-    class.weights = NULL, # probably don't need to weight classes
-    shrinking = TRUE,
-    cross = 0,
-    fitted = TRUE)
-
-# Predicting on train set
-thorndale_in_pred_train <- predict(thorndale_in_model, thorndale_in_train, type = "class")
-
-# Checking classification accuracy
-table(thorndale_in_pred_train, thorndale_in_train$delay)
-
-
-# Predicting on Validation set
-thorndale_in_pred_test <- predict(thorndale_in_model, thorndale_in_test, type = "class")
-
-# Checking classification accuracy
-mean(thorndale_in_pred_test == thorndale_in_test$delay)
-prop.table(table(thorndale_in_pred_test,thorndale_in_test$delay))
-
-# importance
-importance(thorndale_in_model)
