@@ -432,16 +432,13 @@ location <- "~/Documents/_SCHOOL/_Drexel/STAT 642 - Data Mining/Assignments/Will
 # import saved data
 model_data <- readRDS(paste(location,"model_data.rds", sep="/"))
 
-# svm needs the class labels to be a labelled factor
-model_data$delay <- factor(model_data$delay,
-                           labels = c("on.time","late"),
-                           levels = c(1, 2))
+# if you need the class labels to be a labelled factor
+model_data$delay <- factor(model_data$delay, labels = c("on.time","late"), levels = c(1, 2))
 
 # Split into training/testing set
-set.seed(3456)
-index <- createDataPartition(model_data$delay, p = .7,
-                                  list = FALSE,
-                                  times = 1)
+set.seed(100)
+# index <- createDataPartition(model_data$delay, p = .7, list = FALSE, times = 1)
+index <- sample(nrow(model_data), 0.7*nrow(model_data), replace=F)
 
 model_train <- model_data[ index,]
 model_test  <- model_data[-index,]
@@ -480,16 +477,4 @@ rm(index, a,b)
 
 
 #-- SVM -------------------------------------------------------------------------------------------
-model <- svm(delay ~ ., data = train,
-                         type = "C-classification", scale = TRUE,
-                         cost = 1, # CV
-                         epsilon = 0.1, # CV
-                         kernel = "radial", # needs CV
-                         gamma = 1 / ncol(data), # for all except linear; needs CV
-                         # degree = 3, # for kernel = polynomial; needs CV
-                         # coef0 = 0, # for kernels = polynomial & sigmoid; needs CV
-                         class.weights = NULL, # probably don't need to weight classes
-                         shrinking = TRUE,
-                         cross = 0,
-                         fitted = TRUE)
 
