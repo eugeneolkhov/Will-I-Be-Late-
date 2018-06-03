@@ -237,8 +237,10 @@ thorndale_in_weather <- readRDS(paste(location,"thorndale_in_weather.RDS", sep="
 thorndale_out_weather <- readRDS(paste(location,"thorndale_out_weather.RDS", sep="/"))
 
 # stack data
-thorndale_data <- rbind(thorndale_in_weather, thorndale_out_weather)
-foxchase_data <- rbind(foxchase_in_weather, foxchase_out_weather)
+thorndale_data <- rbind(thorndale_in_weather, thorndale_out_weather) %>%
+  mutate(line = "Thorndale")
+foxchase_data <- rbind(foxchase_in_weather, foxchase_out_weather) %>%
+  mutate(line = "Fox Chase")
 stack_data <- rbind(thorndale_data, foxchase_data)
 
 
@@ -268,6 +270,7 @@ stack_data <- mutate(stack_data,
 thorndale_data <- thorndale_data %>%
   filter(delay != 999) %>%
   mutate(delay = factor(delay)) %>%
+  mutate(line = factor(line)) %>%
   mutate(day_of_week = factor(weekdays(round_timestamp))) %>%
   mutate(hour = factor(hour(round_timestamp))) %>%
   mutate(month = factor(month(round_timestamp))) %>%
@@ -277,6 +280,7 @@ thorndale_data <- thorndale_data %>%
 foxchase_data <- foxchase_data %>%
   filter(delay != 999) %>%
   mutate(delay = factor(delay)) %>%
+  mutate(line = factor(line)) %>%
   mutate(day_of_week = factor(weekdays(round_timestamp))) %>%
   mutate(hour = factor(hour(round_timestamp))) %>%
   mutate(month = factor(month(round_timestamp))) %>%
@@ -286,6 +290,7 @@ foxchase_data <- foxchase_data %>%
 stack_data <- stack_data %>%
   filter(delay != 999) %>%
   mutate(delay = factor(delay)) %>%
+  mutate(line = factor(line)) %>%
   mutate(day_of_week = factor(weekdays(round_timestamp))) %>%
   mutate(hour = factor(hour(round_timestamp))) %>%
   mutate(month = factor(month(round_timestamp))) %>%
@@ -295,7 +300,7 @@ stack_data <- stack_data %>%
 
 # Variable selection
   # Train ID has 94 levels - randomForest only supports up to 53.
-model_vars <- c("delay", "origin", "next_station", "day_of_week", "month", "hour",
+model_vars <- c("delay", "line", "origin", "next_station", "day_of_week", "month", "hour",
              "precipIntensity", "precipProbability", "temperature", "windSpeed", "visibility")
 
 thorndale_model <- thorndale_data %>%
@@ -383,6 +388,11 @@ for (j in length(data)) {
 #summary(foxchase_data)
 summary(model_data)
 
+
+### save
+saveRDS(model_data, paste(location,"model_data_factors.RDS", sep="/"))
+
+
 rm(data, continuous)
 
 #-- Drop NAs --------------------------------------------------------------------------------------
@@ -396,6 +406,9 @@ model_data <- model_data[complete.cases(model_data),]
 #summary(foxchase_data)
 summary(model_data)
 
+### save
+saveRDS(model_data, paste(location,"model_data_factors.RDS", sep="/"))
+
 
 #-- Create Dummy Variables and Scale --------------------------------------------------------------
 library(tidyverse)
@@ -405,7 +418,7 @@ delay <- model_data$delay
 
 # break out factors
 categorical <- model_data %>%
-  select(hour, day_of_week, month, origin, next_station)
+  select(hour, day_of_week, month, line, origin, next_station)
 dummies <- model.matrix(~ .,data = categorical)
 
 # scale continuous data
@@ -414,14 +427,13 @@ continuous <- model_data %>%
 scaled <- scale(continuous)
 summary(scaled)
 
-model_data <- as.data.frame(cbind(delay, cbind(dummies, scaled)))
-
-rm(categorical, continuous, dummies, scaled, delay)
-
-#-- Save model data -------------------------------------------------------------------------------
+model_data <- as.data.frame(cbind(delay, cbind(dummies, scaled))) %>%
+  select(-2)
 
 ### Export RDS
-saveRDS(model_data, paste(location,"model_data.rds", sep="/"))
+saveRDS(model_data, paste(location,"model_data_dummies.RDS", sep="/"))
+
+rm(categorical, continuous, dummies, scaled, delay)
 
 
 
@@ -470,11 +482,4 @@ rm(index, a,b)
 # CV by 29 May
 # present on 5 June
 
-
-
-#-- Random Forest  --------------------------------------------------------------------------------
-
-
-
-#-- SVM -------------------------------------------------------------------------------------------
 
